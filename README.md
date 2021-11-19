@@ -8,6 +8,7 @@ A python HTML builder library.
 - [ ] Prettify JavaScript to fit in with the prettified html.
 - [ ] Add more API methods.
 - [ ] Add CSS selector support.
+- [ ] Add styling configuration.
 
 # Usage
 If you have ever manipulated html using JavaScript then this should be really intuitive.
