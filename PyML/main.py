@@ -7,9 +7,10 @@ import textwrap
 __all__ = ["Document"]
 
 STANDALONE_TAGS = [
-    "br",
-    "source",
-    "input"
+    "br", "source", "input", "area",
+    "iframe", "link", "meta", "param",
+    "img", "col", "basefont", "base",
+    "hr", "isindex"
 ]
 INDENT_LEVEL = 4
 
