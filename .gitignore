@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+PyML/css_selector_parser.py
 # Distribution / packaging
 .Python
 build/

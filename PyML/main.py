@@ -1,10 +1,11 @@
-from typing import Optional, Union, List, Dict
+from typing import Iterator, Optional, Union, List, Dict
 from collections import defaultdict
 from json import dumps as jsonify
+import itertools
 import textwrap
 
 
-__all__ = ["Document"]
+__all__ = ["Document", "HtmlNode", "TextNode"]
 
 STANDALONE_TAGS = [
     "br", "source", "input", "area",
@@ -28,12 +29,58 @@ class TextNode:
 
 
 class HtmlNode:
+    @property
+    def children(self):
+        return self.__children
+
     def __init__(self, tag):
         self.tag: str = tag
         self.parent_node: Optional[HtmlNode] = None
 
         self.__children: List[Union[TextNode, HtmlNode]] = []
         self.properties: Dict[str, Union[str, int]] = defaultdict(lambda: dict())  # noqa
+
+    @property
+    def inner_text(self):
+        out = []
+        for child in self.children:
+            if type(child) is TextNode:
+                out.append(child.content)
+            else:
+                out.append(child.inner_text)
+        return "\n".join(list(itertools.chain(out)))
+
+    def find(self, tag: Optional[str] = None, id: Optional[str] = None, class_: Optional[str] = None, properties: Dict[str, str] = {}) -> Optional["HtmlNode"]:
+        try:
+            return next(self.find_all(tag, id, class_, properties))
+        except StopIteration:
+            return None
+
+    def find_all(self, tag: Optional[str] = None, id: Optional[str] = None, class_: Optional[str] = None, properties: Dict[str, str] = {}) -> Iterator["HtmlNode"]:
+        for child in self.children:
+            booleans: List[bool] = []
+            if type(child) is HtmlNode:
+                if tag is not None:
+                    booleans.append(child.tag.lower() == tag.lower())
+                if id is not None:
+                    booleans.append(child.properties.get("id", None) == id)
+                if class_ is not None:
+                    booleans.append(all(x in child.properties.get("class", "").split() for x in class_.split()))  # noqa
+                if properties is not None:
+                    for key, value in properties.items():
+                        if key == "class":
+                            booleans.append(all(x in child.properties.get("class", "").split() for x in value.split()))  # noqa
+                            continue
+                        if key in child.properties:
+                            booleans.append(value == child.properties.get(key))
+                        else:
+                            booleans.append(False)
+                if all(booleans):
+                    yield child
+
+                grandchild = child.find_all(tag, id, class_, properties)
+                if grandchild:
+                    yield from grandchild
 
     def append_child(self, node):
         if self.tag.lower() in STANDALONE_TAGS:
@@ -64,6 +111,23 @@ class HtmlNode:
 
 
 class Document:
+    @property
+    def children(self):
+        return [self.head, self.body]
+    tag = "html"
+
+    @property
+    def title(self):
+        titl = [x for x in filter(
+            lambda x: x.tag.lower() == "title", self.head.children)]
+        if titl:
+            return titl[0].inner_text
+        return ""
+
+    @property
+    def inner_text(self):
+        return self.body.inner_text
+
     def __init__(self):
         # Declaring at initialization so that it's not static.
         self.head = HtmlNode("head")
@@ -75,6 +139,22 @@ class Document:
             node.set_attribute(key, kwargs[key])
         return node
 
+    def find(self,
+        tag: Optional[str] = None,
+        id: Optional[str] = None,
+        class_: Optional[str] = None,
+        properties: Dict[str, str] = {}
+    ) -> Optional["HtmlNode"]:  # noqa
+        return HtmlNode.find(self, tag, id, class_, properties)
+
+    def find_all(self,
+        tag: Optional[str] = None,
+        id: Optional[str] = None,
+        class_: Optional[str] = None,
+        properties: Dict[str, str] = {}
+    ) -> Iterator["HtmlNode"]:  # noqa
+        return HtmlNode.find_all(self, tag, id, class_, properties)
+
     def create_text_node(self, text: str) -> TextNode:
         return TextNode(text)
 
@@ -83,7 +163,7 @@ class Document:
         self.body.append_child(node)
 
     def __repr__(self):
-        return "<html>\n{}\n</html>".format(
+        return "<!DOCTYPE html>\n\n<html>\n{}\n</html>".format(
             indent(str(self.head), INDENT_LEVEL) + "\n" +
             indent(str(self.body), INDENT_LEVEL)
         )
