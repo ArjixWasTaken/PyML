@@ -35,3 +35,10 @@ results in
     <body></body>
 </html>
 ```
+
+
+# Contributing
+Anybody is free to contribute if they want, just make sure you follow the points listed below:
+- Don't rename/move methods/objects without consulting me first.
+- Don't introduce new functionality without explaining in-depth why we need said functionality (unless its from the [Goals](#goals) section)
+- Your code must be PEP-8 compliable.
