@@ -40,6 +40,20 @@ class HtmlNode:
         self.__children: List[Union[TextNode, HtmlNode]] = []
         self.properties: Dict[str, Union[str, int]] = defaultdict(lambda: dict())  # noqa
 
+    def remove(self):
+        if type(self.parent_node) is Document:
+            raise Exception("You can not remove a root element. (head/body)")
+
+        self.parent_node.eject_child(self)
+        self.tag = "DELETED"
+        self.__children = []
+        self.properties = {}
+
+    def eject_child(self, child: Union["HtmlNode", TextNode]):
+        self.__children = list(
+            filter(lambda x: x is not child, self.__children))
+        child.parent_node = None
+
     @property
     def inner_text(self):
         out = []
@@ -132,6 +146,9 @@ class Document:
         # Declaring at initialization so that it's not static.
         self.head = HtmlNode("head")
         self.body = HtmlNode("body")
+
+        self.head.parent_node = self
+        self.body.parent_node = self
 
     def create_element(self, tag: str, **kwargs) -> HtmlNode:
         node = HtmlNode(tag)
