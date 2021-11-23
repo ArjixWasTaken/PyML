@@ -8,7 +8,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='PyML',
-    version="0.0.1",
+    version="0.0.2",
     author='Arjix',
     author_email='arjixg53@gmail.com',
     description='A python HTML builder library.',
