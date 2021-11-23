@@ -50,6 +50,8 @@ class HtmlNode:
         self.properties = {}
 
     def eject_child(self, child: Union["HtmlNode", TextNode]):
+        if type(child.parent_node) is Document:
+            raise Exception("You can not eject a root element. (head/body)")
         self.__children = list(
             filter(lambda x: x is not child, self.__children))
         child.parent_node = None
@@ -124,31 +126,42 @@ class HtmlNode:
         )
 
 
-class Document:
-    @property
-    def children(self):
-        return [self.head, self.body]
-    tag = "html"
+class Document(HtmlNode):
+    def __init__(self):
+        super().__init__("html")
+        self.head = HtmlNode("head")
+        self.body = HtmlNode("body")
+        self.append_child(self.head)
+        self.append_child(self.body)
+
+        def append_child(node: Union[HtmlNode, TextNode]):
+            node.parent_node = self.body
+            self.body.append_child(node)
+
+        # Hack-ish way to override this function after using it.
+        self.append_child = append_child
 
     @property
-    def title(self):
-        titl = [x for x in filter(
-            lambda x: x.tag.lower() == "title", self.head.children)]
-        if titl:
-            return titl[0].inner_text
-        return ""
+    def title(self) -> Optional[str]:
+        title_ = self.head.find("title")
+        if title_ is not None:
+            return title_.inner_text
+
+    @title.setter
+    def title(self, text: str):
+        title_ = self.head.find("title")
+        if title_ is not None:
+            for child in title_.children:
+                child.remove()
+        else:
+            title_ = self.create_element("title")
+            self.head.append_child(title_)
+
+        title_.append_child(self.create_text_node(text))
 
     @property
     def inner_text(self):
         return self.body.inner_text
-
-    def __init__(self):
-        # Declaring at initialization so that it's not static.
-        self.head = HtmlNode("head")
-        self.body = HtmlNode("body")
-
-        self.head.parent_node = self
-        self.body.parent_node = self
 
     def create_element(self, tag: str, **kwargs) -> HtmlNode:
         node = HtmlNode(tag)
@@ -156,31 +169,5 @@ class Document:
             node.set_attribute(key, kwargs[key])
         return node
 
-    def find(self,
-        tag: Optional[str] = None,
-        id: Optional[str] = None,
-        class_: Optional[str] = None,
-        properties: Dict[str, str] = {}
-    ) -> Optional["HtmlNode"]:  # noqa
-        return HtmlNode.find(self, tag, id, class_, properties)
-
-    def find_all(self,
-        tag: Optional[str] = None,
-        id: Optional[str] = None,
-        class_: Optional[str] = None,
-        properties: Dict[str, str] = {}
-    ) -> Iterator["HtmlNode"]:  # noqa
-        return HtmlNode.find_all(self, tag, id, class_, properties)
-
     def create_text_node(self, text: str) -> TextNode:
         return TextNode(text)
-
-    def append_child(self, node: Union[HtmlNode, TextNode]):
-        node.parent_node = self.body
-        self.body.append_child(node)
-
-    def __repr__(self):
-        return "<!DOCTYPE html>\n\n<html>\n{}\n</html>".format(
-            indent(str(self.head), INDENT_LEVEL) + "\n" +
-            indent(str(self.body), INDENT_LEVEL)
-        )
