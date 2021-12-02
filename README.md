@@ -20,10 +20,8 @@ And insert that node into the document.
 from PyML import Document
 
 doc = Document()
-title = doc.create_element("title")
-title.append_child(doc.create_text_node("Example title!"))
+doc.title = "Example title!"
 
-doc.head.append_child(title)
 print(doc)
 ```
 results in
