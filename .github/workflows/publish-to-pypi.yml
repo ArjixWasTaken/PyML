@@ -1,0 +1,25 @@
+name: Publish package
+
+
+on:
+  push:
+    paths:
+      - 'setup.py'
+
+concurrency: 
+  group: "publish"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: "Build dist"
+        run: python3 setup.py sdist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
