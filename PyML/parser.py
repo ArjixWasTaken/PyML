@@ -95,7 +95,7 @@ def parse_tag(tag: str) -> Tuple[str, Attributes]:
         for x in re.findall(attributes_re, " ".join(attributes))
     }
 
-    return tag[1:].lstrip("/"), attributes
+    return tag.lstrip("<").lstrip("/"), attributes
 
 
 if __name__ == "__main__":
@@ -157,9 +157,13 @@ if __name__ == "__main__":
 
                 current_node = stack.pop()
 
-                if current_node.tag == node.tag:
-                    if len(stack) == 1:
-                        stack.append(current_node)
+                if current_node.tag != node.tag:
+                    raise Exception(
+                        "Closed an outer tag without closing the inner tag.")
+                else:
+                    pass
+                if not len(stack):
+                    stack.append(current_node)
 
                 #  tag = re.sub(r'[<>/]', "", itr.token.value).strip()
 
