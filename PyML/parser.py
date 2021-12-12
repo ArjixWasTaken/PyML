@@ -20,6 +20,7 @@ def _process_token(pair, lexer):
 
 HTML_SYNTAX = flexicon.Lexer(_process_token).simple(
     (r'[ \t\r\n]+', lambda: ('WS',)),
+    (r'(<\w+(?:.*?)?/>)', lambda val: ('SELF_CLOSING_TAG', val)),
     (r'(<\w+(?:.*?)?>)', lambda val: ('OPENING_TAG', val)),
     (r'(</\w+>)', lambda val: ('CLOSING_TAG', val)),
     (r'([\d\w]*)', lambda val: ("TEXT", val))
@@ -94,18 +95,19 @@ def parse_tag(tag: str) -> Tuple[str, Attributes]:
         for x in re.findall(attributes_re, " ".join(attributes))
     }
 
-    return tag[1:], attributes
+    return tag[1:].lstrip("/"), attributes
 
 
 if __name__ == "__main__":
-    from PyML import HtmlNode, TextNode
+    from PyML import HtmlNode, TextNode, Document
 
     sample = """
         <html hmm="2px">
             <head></head>
             <body>
                 <div>
-                    <a href="https://google.com">
+                    <a href="https://google.com"></a>
+                    <br />
                 </div>
                 <p></p>
                 <p></p>
@@ -114,32 +116,50 @@ if __name__ == "__main__":
     """
 
     stack: List[HtmlNode] = []
+    doc = None
     tokens = HTML_SYNTAX.lex(sample)
     depth = 0
-    last_depth = 0
     itr = TokenIterator(tokens)
 
     while itr.token is not None:
         itr.burn('WS')
         if itr.token:
             if itr.token.name == "OPENING_TAG":
-                depth += 1
-                last_depth = depth
-
                 tag, attributes = parse_tag(itr.token.value)
                 node = HtmlNode(tag)
+
+                for key, value in attributes.items():
+                    node.set_attribute(key, value)
 
                 if stack:
                     stack[-1].append_child(node)
                 stack.append(node)
 
+            elif itr.token.name == "SELF_CLOSING_TAG":
+                tag, attributes = parse_tag(itr.token.value)
+                node = HtmlNode(tag)
+
                 for key, value in attributes.items():
-                    stack[-1].set_attribute(key, value)
+                    node.set_attribute(key, value)
+
+                if len(stack) == 0:
+                    doc = Document()
+                    stack.extend([doc, doc.body])
+
+                stack[-1].append_child(node)
 
             elif itr.token.name == "CLOSING_TAG":
-                depth -= 1
-                if depth - last_depth == -1:
-                    stack.pop()
+                tag, attributes = parse_tag(itr.token.value)
+                node = HtmlNode(tag)
+
+                for key, value in attributes.items():
+                    node.set_attribute(key, value)
+
+                current_node = stack.pop()
+
+                if current_node.tag == node.tag:
+                    if len(stack) == 1:
+                        stack.append(current_node)
 
                 #  tag = re.sub(r'[<>/]', "", itr.token.value).strip()
 
@@ -148,3 +168,4 @@ if __name__ == "__main__":
                 if stack:
                     stack[-1].append_child(node)
             itr.next()
+    print(stack[0])
