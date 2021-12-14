@@ -1,4 +1,5 @@
-from typing import Dict, List, Tuple
+from PyML.main import HtmlNode, TextNode, Document
+from typing import Dict, List, Tuple, Union
 import flexicon
 import re
 
@@ -15,15 +16,18 @@ class Token(object):
 
 
 def _process_token(pair, lexer):
+    print(pair)
     return Token(lexer.row, lexer.col, *pair)
 
 
 HTML_SYNTAX = flexicon.Lexer(_process_token).simple(
     (r'[ \t\r\n]+', lambda: ('WS',)),
-    (r'(<\w+(?:.*?)?/>)', lambda val: ('SELF_CLOSING_TAG', val)),
-    (r'(<\w+(?:.*?)?>)', lambda val: ('OPENING_TAG', val)),
+    (r'<!(?:DOCTYPE|doctype) (.*?)>', lambda val: ("DOCTYPE", val)),
+    (r'<!--((?:.|\s)*?)-->', lambda val: ("COMMENT", val)),  # noqa
+    (r'<([^\/>]+)\/>', lambda val: ('SELF_CLOSING_TAG', val)),
+    (r'(<\w+(?:(?:.|\s)*?)?>)', lambda val: ('OPENING_TAG', val)),
     (r'(</\w+>)', lambda val: ('CLOSING_TAG', val)),
-    (r'([\d\w]*)', lambda val: ("TEXT", val))
+    (r'([^\x00-\x7F]+|[\w\s()\[\]{}.\'\"!@#$%^&*:;|\\_\-+=?,<>]+)(?!</)', lambda val: ("TEXT", val))  # noqa
 )
 
 
@@ -76,7 +80,7 @@ class TokenIterator(object):
         raise err
 
     def burn(self, name):
-        while self.name is name:
+        while self.name == name:
             self.next()
 
 
@@ -98,31 +102,16 @@ def parse_tag(tag: str) -> Tuple[str, Attributes]:
     return tag.lstrip("<").lstrip("/"), attributes
 
 
-if __name__ == "__main__":
-    from PyML import HtmlNode, TextNode, Document
-
-    sample = """
-        <html hmm="2px">
-            <head></head>
-            <body>
-                <div>
-                    <a href="https://google.com"></a>
-                    <br />
-                </div>
-                <p></p>
-                <p></p>
-            </body>
-        </html>
-    """
-
+def doc_from_string(html: str) -> Document:
     stack: List[HtmlNode] = []
-    doc = None
-    tokens = HTML_SYNTAX.lex(sample)
-    depth = 0
+    tokens = HTML_SYNTAX.lex(html)
+
     itr = TokenIterator(tokens)
 
     while itr.token is not None:
         itr.burn('WS')
+        itr.burn('COMMENT')
+
         if itr.token:
             if itr.token.name == "OPENING_TAG":
                 tag, attributes = parse_tag(itr.token.value)
@@ -133,7 +122,9 @@ if __name__ == "__main__":
 
                 if stack:
                     stack[-1].append_child(node)
-                stack.append(node)
+
+                if not node.isVoidElement():
+                    stack.append(node)
 
             elif itr.token.name == "SELF_CLOSING_TAG":
                 tag, attributes = parse_tag(itr.token.value)
@@ -142,11 +133,10 @@ if __name__ == "__main__":
                 for key, value in attributes.items():
                     node.set_attribute(key, value)
 
-                if len(stack) == 0:
-                    doc = Document()
-                    stack.extend([doc, doc.body])
-
-                stack[-1].append_child(node)
+                if stack:
+                    stack[-1].append_child(node)
+                else:
+                    raise Exception("No 'html' tag was found.")
 
             elif itr.token.name == "CLOSING_TAG":
                 tag, attributes = parse_tag(itr.token.value)
@@ -159,17 +149,27 @@ if __name__ == "__main__":
 
                 if current_node.tag != node.tag:
                     raise Exception(
-                        "Closed an outer tag without closing the inner tag.")
+                        "Closed an outer tag ({}) without closing the inner tag ({})".format(current_node.tag, node.tag))
                 else:
+                    # Should be fine
                     pass
                 if not len(stack):
                     stack.append(current_node)
-
-                #  tag = re.sub(r'[<>/]', "", itr.token.value).strip()
 
             elif itr.token.name == "TEXT":
                 node = TextNode(itr.token.value)
                 if stack:
                     stack[-1].append_child(node)
             itr.next()
-    print(stack[0])
+
+    doc = stack[0]
+    doc.__class__ = Document
+    doc.head = doc.find("head")
+    doc.body = doc.find("body")
+
+    def append_child(node: Union[HtmlNode, TextNode]):
+        node.parent_node = doc.body
+        doc.body.append_child(node)
+
+    doc.append_child = append_child
+    return doc

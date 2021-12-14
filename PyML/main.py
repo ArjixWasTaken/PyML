@@ -8,10 +8,10 @@ import textwrap
 __all__ = ["Document", "HtmlNode", "TextNode"]
 
 STANDALONE_TAGS = [
-    "br", "source", "input", "area",
-    "iframe", "link", "meta", "param",
-    "img", "col", "basefont", "base",
-    "hr", "isindex"
+    # "br", "source", "input", "area",
+    # "iframe", "link", "meta", "param",
+    # "img", "col", "basefont", "base",
+    # "hr", "isindex"
 ]
 INDENT_LEVEL = 4
 
@@ -55,6 +55,19 @@ class HtmlNode:
         self.__children = list(
             filter(lambda x: x is not child, self.__children))
         child.parent_node = None
+
+    def isVoidElement(self):
+        if self.tag.lower() in (
+            "link", "input",
+            "meta", "area",
+            "base", "br",
+            "col", "hr",
+            "img", "param",
+            "command", "keygen",
+            "source", "track"
+        ):
+            return True
+        return False
 
     @property
     def inner_text(self):
