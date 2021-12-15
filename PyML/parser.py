@@ -16,7 +16,7 @@ class Token(object):
 
 
 def _process_token(pair, lexer):
-    print(pair)
+    # print(pair)
     return Token(lexer.row, lexer.col, *pair)
 
 
@@ -27,7 +27,7 @@ HTML_SYNTAX = flexicon.Lexer(_process_token).simple(
     (r'<([^\/>]+)\/>', lambda val: ('SELF_CLOSING_TAG', val)),
     (r'(<\w+(?:(?:.|\s)*?)?>)', lambda val: ('OPENING_TAG', val)),
     (r'(</\w+>)', lambda val: ('CLOSING_TAG', val)),
-    (r'([^\x00-\x7F]+|[\w\s()\[\]{}.\'\"!@#$%^&*:;|\\_\-+=?,<>]+)(?!</)', lambda val: ("TEXT", val))  # noqa
+    (r'(?s)(.+?)(?=</\w+)', lambda val: ("TEXT", val))  # noqa
 )
 
 
