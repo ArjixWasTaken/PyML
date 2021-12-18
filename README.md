@@ -34,6 +34,28 @@ results in
 </html>
 ```
 
+# Parsing html as a Document
+```python
+from PyML.parser import doc_from_string
+
+html = """
+<html>
+    <head>
+        <title>Example title!</title>
+    </head>
+    <body>
+        <div class="heh">
+            <img src="myImage.png">
+        </div>
+    </body>
+</html>
+"""
+
+doc = doc_from_string(html)
+print(doc.title)
+print(doc.find("img").properties["src"])
+```
+
 
 # Contributing
 Anybody is free to contribute if they want, just make sure you follow the points listed below:
