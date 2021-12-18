@@ -16,7 +16,9 @@ class Token(object):
 
 
 def _process_token(pair, lexer):
-    # print(pair)
+    if pair[0] == "STRING_WITH_TAG":
+        raise NotImplemented(
+            "Report this to the dev, along with the html that triggered it.:\n" + pair[1])
     return Token(lexer.row, lexer.col, *pair)
 
 
@@ -27,7 +29,8 @@ HTML_SYNTAX = flexicon.Lexer(_process_token).simple(
     (r'<([^\/>]+)\/>', lambda val: ('SELF_CLOSING_TAG', val)),
     (r'(<\w+(?:(?:.|\s)*?)?>)', lambda val: ('OPENING_TAG', val)),
     (r'(</\w+>)', lambda val: ('CLOSING_TAG', val)),
-    (r'(?s)(.+?)(?=</\w+)', lambda val: ("TEXT", val))  # noqa
+    (r'((["\'`]).*?</?>.*?\2)', lambda val: ("STRING_WITH_TAG", val)),
+    (r'(?s)(.+?)(?=</?\w+)', lambda val: ("TEXT", val))  # noqa
 )
 
 
