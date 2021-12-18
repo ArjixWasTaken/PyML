@@ -4,7 +4,7 @@ A python HTML builder library.
 
 # Goals
 - [x] Fully functional html builder similar to the javascript node manipulation.
-- [ ] Implement an html parser that returns a Document instance with the proper properties and children.
+- [x] Implement an html parser that returns a Document instance with the proper properties and children.
 - [ ] Prettify JavaScript to fit in with the prettified html.
 - [ ] Add more API methods.
 - [ ] Add CSS selector support.
