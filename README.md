@@ -35,6 +35,7 @@ results in
 ```
 
 # Parsing html as a Document
+Note: The parser is very experimental, that means that it might not be able to properly parse some html.
 ```python
 from PyML.parser import doc_from_string
 
