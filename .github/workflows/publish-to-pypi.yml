@@ -16,9 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
+      - name: "Install Poetry"
+        run: curl -sSL https://install.python-poetry.org | python3 -
+      
       - name: "Build dist"
-        run: python3 setup.py sdist
+        run: poetry build
 
+      - name: "Publish to Pypi"
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
